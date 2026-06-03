@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0F172A" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Finlu" />
+  <meta name="description" content="Assistente financeiro pessoal — controle gastos, metas e orçamentos" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="format-detection" content="telephone=no" />
+
+  <!-- iOS splash / icons -->
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png" />
+  <link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png" />
+  <link rel="manifest" href="manifest.json" />
+
+  <title>Finlu — Assistente Financeiro</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ═══ APP SHELL ═══ -->
+<div id="app">
+
+  <!-- SPLASH (shown until loaded) -->
+  <div id="splash" role="status" aria-label="Carregando Finlu">
+    <div class="splash-logo">
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <rect width="48" height="48" rx="14" fill="#1E40AF"/>
+        <path d="M14 26l7 7 13-16" stroke="#059669" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="24" cy="18" r="5" fill="none" stroke="white" stroke-width="2.5"/>
+        <path d="M24 13v-3M24 26v3M17 18h-3M34 18h-3" stroke="white" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span class="splash-name">finlu</span>
+    <span class="splash-sub">carregando…</span>
+  </div>
+
+  <!-- ─── ONBOARDING ─── -->
+  <div id="onboarding" class="screen hidden" role="main" aria-label="Configuração inicial">
+    <div class="onb-wrap">
+      <div class="onb-slides">
+        <div class="onb-slide active" data-slide="0">
+          <div class="onb-icon"><i class="ti ti-wallet" aria-hidden="true"></i></div>
+          <h1>Controle total do seu dinheiro</h1>
+          <p>Registre receitas e gastos, crie orçamentos e veja pra onde seu dinheiro vai.</p>
+        </div>
+        <div class="onb-slide" data-slide="1">
+          <div class="onb-icon"><i class="ti ti-target" aria-hidden="true"></i></div>
+          <h1>Metas que você realmente atinge</h1>
+          <p>Defina objetivos de economia e acompanhe o progresso mês a mês.</p>
+        </div>
+        <div class="onb-slide" data-slide="2">
+          <div class="onb-icon"><i class="ti ti-chart-line" aria-hidden="true"></i></div>
+          <h1>Insights automáticos</h1>
+          <p>Relatórios visuais que mostram seus padrões de gasto e oportunidades de economia.</p>
+        </div>
+      </div>
+      <div class="onb-dots" role="tablist" aria-label="Etapas do tutorial">
+        <button class="onb-dot active" role="tab" aria-selected="true" aria-label="Etapa 1 de 3"></button>
+        <button class="onb-dot" role="tab" aria-selected="false" aria-label="Etapa 2 de 3"></button>
+        <button class="onb-dot" role="tab" aria-selected="false" aria-label="Etapa 3 de 3"></button>
+      </div>
+      <div class="onb-actions">
+        <button id="onb-next" class="btn-primary" aria-label="Próximo slide">Próximo</button>
+        <button id="onb-skip" class="btn-ghost">Pular</button>
+      </div>
+      <div id="onb-setup" class="hidden">
+        <h2>Qual é o seu nome?</h2>
+        <input type="text" id="onb-name" class="input-field" placeholder="Ex: Ana" maxlength="30" autocomplete="given-name" aria-label="Seu nome" />
+        <h2 style="margin-top:1.5rem">Renda mensal estimada</h2>
+        <input type="number" id="onb-income" class="input-field" placeholder="R$ 0,00" inputmode="decimal" aria-label="Renda mensal" />
+        <button id="onb-finish" class="btn-primary" style="margin-top:1.5rem" aria-label="Começar a usar o Finlu">Começar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MAIN APP ─── -->
+  <div id="main-app" class="hidden">
+
+    <!-- TOP BAR -->
+    <header class="topbar" role="banner">
+      <div class="topbar-left">
+        <button id="menu-btn" class="icon-btn" aria-label="Menu lateral" aria-expanded="false" aria-controls="sidebar">
+          <i class="ti ti-menu-2" aria-hidden="true"></i>
+        </button>
+        <span class="topbar-title" id="page-title">Início</span>
+      </div>
+      <div class="topbar-right">
+        <button class="icon-btn" id="notif-btn" aria-label="Notificações" aria-haspopup="true">
+          <i class="ti ti-bell" aria-hidden="true"></i>
+          <span class="notif-badge hidden" aria-label="novas notificações" id="notif-count">0</span>
+        </button>
+        <button class="avatar-btn" id="avatar-btn" aria-label="Perfil">
+          <span id="avatar-initials">?</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="sidebar" role="navigation" aria-label="Menu principal" aria-hidden="true">
+      <div class="sidebar-inner">
+        <div class="sidebar-profile">
+          <div class="avatar-lg" id="sidebar-avatar">?</div>
+          <div>
+            <div class="sb-name" id="sidebar-name">Usuário</div>
+            <div class="sb-sub" id="sidebar-income">R$ 0,00 / mês</div>
+          </div>
+        </div>
+        <nav>
+          <button class="sb-item active" data-page="home" aria-current="page">
+            <i class="ti ti-home" aria-hidden="true"></i> Início
+          </button>
+          <button class="sb-item" data-page="transactions">
+            <i class="ti ti-arrows-exchange" aria-hidden="true"></i> Transações
+          </button>
+          <button class="sb-item" data-page="budget">
+            <i class="ti ti-chart-pie" aria-hidden="true"></i> Orçamento
+          </button>
+          <button class="sb-item" data-page="goals">
+            <i class="ti ti-target" aria-hidden="true"></i> Metas
+          </button>
+          <button class="sb-item" data-page="reports">
+            <i class="ti ti-chart-bar" aria-hidden="true"></i> Relatórios
+          </button>
+          <button class="sb-item" data-page="settings">
+            <i class="ti ti-settings" aria-hidden="true"></i> Configurações
+          </button>
+        </nav>
+        <div class="sb-version">Finlu v1.0 · PWA</div>
+      </div>
+    </aside>
+    <div id="sidebar-overlay" class="sidebar-overlay hidden" aria-hidden="true"></div>
+
+    <!-- PAGE CONTAINER -->
+    <main id="pages" class="pages" role="main">
+
+      <!-- ── HOME ── -->
+      <section id="page-home" class="page active" aria-label="Página inicial">
+        <div class="page-scroll">
+          <!-- Balance Card -->
+          <div class="balance-card" role="region" aria-label="Saldo do mês">
+            <div class="balance-label">Saldo disponível</div>
+            <div class="balance-amount" id="balance-display">R$ 0,00</div>
+            <div class="balance-row">
+              <div class="balance-item income">
+                <i class="ti ti-arrow-down-circle" aria-hidden="true"></i>
+                <div>
+                  <div class="bi-label">Receitas</div>
+                  <div class="bi-value" id="home-income">R$ 0,00</div>
+                </div>
+              </div>
+              <div class="balance-divider" aria-hidden="true"></div>
+              <div class="balance-item expense">
+                <i class="ti ti-arrow-up-circle" aria-hidden="true"></i>
+                <div>
+                  <div class="bi-label">Gastos</div>
+                  <div class="bi-value" id="home-expense">R$ 0,00</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="section-header">
+            <span class="section-title">Ações rápidas</span>
+          </div>
+          <div class="quick-actions" role="group" aria-label="Ações rápidas">
+            <button class="qa-btn" id="qa-add-expense" aria-label="Adicionar gasto">
+              <span class="qa-icon expense"><i class="ti ti-minus" aria-hidden="true"></i></span>
+              <span>Gasto</span>
+            </button>
+            <button class="qa-btn" id="qa-add-income" aria-label="Adicionar receita">
+              <span class="qa-icon income"><i class="ti ti-plus" aria-hidden="true"></i></span>
+              <span>Receita</span>
+            </button>
+            <button class="qa-btn" id="qa-add-goal" aria-label="Nova meta">
+              <span class="qa-icon goal"><i class="ti ti-target" aria-hidden="true"></i></span>
+              <span>Meta</span>
+            </button>
+            <button class="qa-btn" id="qa-scan" aria-label="Escanear recibo">
+              <span class="qa-icon scan"><i class="ti ti-scan" aria-hidden="true"></i></span>
+              <span>Recibo</span>
+            </button>
+          </div>
+
+          <!-- Spending by category (mini donut) -->
+          <div class="section-header">
+            <span class="section-title">Gastos do mês</span>
+            <button class="section-link" data-page="reports">Ver mais</button>
+          </div>
+          <div class="card" id="home-spending-card">
+            <canvas id="donut-home" width="140" height="140" role="img" aria-label="Gráfico de gastos por categoria"></canvas>
+            <div class="donut-legend" id="donut-legend"></div>
+          </div>
+
+          <!-- Budget progress -->
+          <div class="section-header">
+            <span class="section-title">Orçamentos</span>
+            <button class="section-link" data-page="budget">Ver todos</button>
+          </div>
+          <div id="home-budgets"></div>
+
+          <!-- Recent transactions -->
+          <div class="section-header">
+            <span class="section-title">Últimas transações</span>
+            <button class="section-link" data-page="transactions">Ver todas</button>
+          </div>
+          <div id="home-transactions" class="tx-list"></div>
+
+          <!-- Goals preview -->
+          <div class="section-header">
+            <span class="section-title">Suas metas</span>
+            <button class="section-link" data-page="goals">Ver todas</button>
+          </div>
+          <div id="home-goals"></div>
+
+          <div style="height:100px"></div>
+        </div>
+      </section>
+
+      <!-- ── TRANSACTIONS ── -->
+      <section id="page-transactions" class="page" aria-label="Transações">
+        <div class="page-scroll">
+          <div class="filter-bar" role="toolbar" aria-label="Filtros">
+            <button class="filter-btn active" data-filter="all">Tudo</button>
+            <button class="filter-btn" data-filter="income">Receitas</button>
+            <button class="filter-btn" data-filter="expense">Gastos</button>
+          </div>
+          <div class="search-wrap">
+            <label class="search-box" aria-label="Buscar transações">
+              <i class="ti ti-search" aria-hidden="true"></i>
+              <input type="search" id="tx-search" placeholder="Buscar…" aria-label="Campo de busca" />
+            </label>
+          </div>
+          <div id="tx-page-list" class="tx-list" role="list" aria-label="Lista de transações"></div>
+          <div id="tx-empty" class="empty-state hidden">
+            <i class="ti ti-receipt-off" aria-hidden="true"></i>
+            <p>Nenhuma transação encontrada</p>
+          </div>
+          <div style="height:100px"></div>
+        </div>
+      </section>
+
+      <!-- ── BUDGET ── -->
+      <section id="page-budget" class="page" aria-label="Orçamentos">
+        <div class="page-scroll">
+          <div class="section-header" style="margin-top:.5rem">
+            <span class="section-title">Seus orçamentos</span>
+            <button class="btn-sm" id="add-budget-btn" aria-label="Adicionar orçamento">
+              <i class="ti ti-plus" aria-hidden="true"></i> Novo
+            </button>
+          </div>
+          <div id="budget-list" role="list" aria-label="Lista de orçamentos"></div>
+          <div id="budget-empty" class="empty-state hidden">
+            <i class="ti ti-chart-pie" aria-hidden="true"></i>
+            <p>Nenhum orçamento criado</p>
+            <button class="btn-primary" id="budget-empty-add">Criar orçamento</button>
+          </div>
+          <div style="height:100px"></div>
+        </div>
+      </section>
+
+      <!-- ── GOALS ── -->
+      <section id="page-goals" class="page" aria-label="Metas financeiras">
+        <div class="page-scroll">
+          <div class="section-header" style="margin-top:.5rem">
+            <span class="section-title">Metas</span>
+            <button class="btn-sm" id="add-goal-btn" aria-label="Adicionar meta">
+              <i class="ti ti-plus" aria-hidden="true"></i> Nova
+            </button>
+          </div>
+          <div id="goals-list" role="list" aria-label="Lista de metas"></div>
+          <div id="goals-empty" class="empty-state hidden">
+            <i class="ti ti-target" aria-hidden="true"></i>
+            <p>Nenhuma meta criada</p>
+            <button class="btn-primary" id="goals-empty-add">Criar meta</button>
+          </div>
+          <div style="height:100px"></div>
+        </div>
+      </section>
+
+      <!-- ── REPORTS ── -->
+      <section id="page-reports" class="page" aria-label="Relatórios financeiros">
+        <div class="page-scroll">
+          <div class="report-period" role="group" aria-label="Período do relatório">
+            <button class="period-btn" data-months="1">1M</button>
+            <button class="period-btn active" data-months="3">3M</button>
+            <button class="period-btn" data-months="6">6M</button>
+            <button class="period-btn" data-months="12">12M</button>
+          </div>
+
+          <!-- Summary cards -->
+          <div class="report-summary" role="region" aria-label="Resumo do período">
+            <div class="rs-card income">
+              <div class="rs-label">Receitas</div>
+              <div class="rs-value" id="report-income">R$ 0</div>
+            </div>
+            <div class="rs-card expense">
+              <div class="rs-label">Gastos</div>
+              <div class="rs-value" id="report-expense">R$ 0</div>
+            </div>
+            <div class="rs-card balance">
+              <div class="rs-label">Economia</div>
+              <div class="rs-value" id="report-balance">R$ 0</div>
+            </div>
+            <div class="rs-card rate">
+              <div class="rs-label">Taxa poupança</div>
+              <div class="rs-value" id="report-rate">0%</div>
+            </div>
+          </div>
+
+          <!-- Monthly bar chart -->
+          <div class="section-header"><span class="section-title">Evolução mensal</span></div>
+          <div class="card chart-card">
+            <div style="position:relative;width:100%;height:180px">
+              <canvas id="bar-report" role="img" aria-label="Gráfico de barras de receitas e gastos mensais"></canvas>
+            </div>
+          </div>
+
+          <!-- Category breakdown -->
+          <div class="section-header"><span class="section-title">Por categoria</span></div>
+          <div class="card chart-card">
+            <canvas id="pie-report" width="200" height="200" role="img" aria-label="Gráfico de categorias de gastos"></canvas>
+            <div id="pie-legend" class="pie-legend"></div>
+          </div>
+
+          <!-- Top expenses -->
+          <div class="section-header"><span class="section-title">Maiores gastos</span></div>
+          <div id="top-expenses" class="tx-list"></div>
+
+          <div style="height:100px"></div>
+        </div>
+      </section>
+
+      <!-- ── SETTINGS ── -->
+      <section id="page-settings" class="page" aria-label="Configurações">
+        <div class="page-scroll">
+          <div class="settings-group">
+            <div class="settings-label">Perfil</div>
+            <div class="settings-row">
+              <span><i class="ti ti-user" aria-hidden="true"></i> Nome</span>
+              <button class="settings-edit" id="edit-name-btn" aria-label="Editar nome">
+                <span id="settings-name-val">—</span> <i class="ti ti-chevron-right" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="settings-row">
+              <span><i class="ti ti-currency-real" aria-hidden="true"></i> Renda mensal</span>
+              <button class="settings-edit" id="edit-income-btn" aria-label="Editar renda mensal">
+                <span id="settings-income-val">—</span> <i class="ti ti-chevron-right" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-label">Aparência</div>
+            <div class="settings-row">
+              <span><i class="ti ti-moon" aria-hidden="true"></i> Tema</span>
+              <div class="toggle-group" role="radiogroup" aria-label="Tema do aplicativo">
+                <button class="toggle-opt active" data-theme="dark" role="radio" aria-checked="true">Escuro</button>
+                <button class="toggle-opt" data-theme="light" role="radio" aria-checked="false">Claro</button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span><i class="ti ti-currency-dollar" aria-hidden="true"></i> Moeda</span>
+              <select id="currency-select" class="settings-select" aria-label="Selecionar moeda">
+                <option value="BRL">R$ Real</option>
+                <option value="USD">$ Dólar</option>
+                <option value="EUR">€ Euro</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-label">Categorias personalizadas</div>
+            <div id="cat-list"></div>
+            <button class="btn-sm" id="add-cat-btn" style="margin-top:.75rem" aria-label="Adicionar categoria">
+              <i class="ti ti-plus" aria-hidden="true"></i> Nova categoria
+            </button>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-label">Dados</div>
+            <button class="settings-danger" id="export-btn" aria-label="Exportar dados em CSV">
+              <i class="ti ti-download" aria-hidden="true"></i> Exportar CSV
+            </button>
+            <button class="settings-danger" id="reset-btn" aria-label="Apagar todos os dados" style="margin-top:.5rem">
+              <i class="ti ti-trash" aria-hidden="true"></i> Apagar todos os dados
+            </button>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-label">Sobre</div>
+            <div class="settings-about">
+              <strong>Finlu</strong> — Assistente financeiro pessoal<br>
+              Versão 1.0 · PWA otimizado para iPhone<br>
+              Todos os dados ficam no seu dispositivo.<br>
+              <span style="color:var(--c-green)">100% privado e offline</span>
+            </div>
+          </div>
+
+          <div style="height:100px"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- BOTTOM NAV -->
+    <nav class="bottom-nav" role="navigation" aria-label="Navegação inferior">
+      <button class="nav-item active" data-page="home" aria-label="Início" aria-current="page">
+        <i class="ti ti-home" aria-hidden="true"></i>
+        <span>Início</span>
+      </button>
+      <button class="nav-item" data-page="transactions" aria-label="Transações">
+        <i class="ti ti-arrows-exchange" aria-hidden="true"></i>
+        <span>Transações</span>
+      </button>
+      <button class="nav-item nav-fab" id="fab-btn" aria-label="Adicionar transação" aria-haspopup="true">
+        <i class="ti ti-plus" aria-hidden="true"></i>
+      </button>
+      <button class="nav-item" data-page="budget" aria-label="Orçamento">
+        <i class="ti ti-chart-pie" aria-hidden="true"></i>
+        <span>Orçamento</span>
+      </button>
+      <button class="nav-item" data-page="reports" aria-label="Relatórios">
+        <i class="ti ti-chart-bar" aria-hidden="true"></i>
+        <span>Relatórios</span>
+      </button>
+    </nav>
+
+  </div><!-- /#main-app -->
+
+</div><!-- /#app -->
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Add Transaction Modal -->
+<div id="modal-tx" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-tx-title">
+  <div class="modal-sheet">
+    <div class="modal-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <h2 id="modal-tx-title">Nova transação</h2>
+      <button class="icon-btn" id="modal-tx-close" aria-label="Fechar"><i class="ti ti-x" aria-hidden="true"></i></button>
+    </div>
+    <div class="modal-body">
+      <!-- Type Toggle -->
+      <div class="type-toggle" role="radiogroup" aria-label="Tipo de transação">
+        <button class="type-btn active" data-type="expense" role="radio" aria-checked="true">Gasto</button>
+        <button class="type-btn" data-type="income" role="radio" aria-checked="false">Receita</button>
+      </div>
+
+      <!-- Amount -->
+      <label class="form-label" for="tx-amount">Valor</label>
+      <div class="amount-input-wrap">
+        <span class="amount-currency" id="tx-currency-sym">R$</span>
+        <input type="number" id="tx-amount" class="amount-input" placeholder="0,00" inputmode="decimal" step="0.01" min="0" aria-label="Valor da transação" />
+      </div>
+
+      <!-- Description -->
+      <label class="form-label" for="tx-desc">Descrição</label>
+      <input type="text" id="tx-desc" class="input-field" placeholder="Ex: Supermercado" maxlength="60" aria-label="Descrição da transação" />
+
+      <!-- Category -->
+      <label class="form-label" for="tx-cat">Categoria</label>
+      <select id="tx-cat" class="input-field" aria-label="Categoria da transação"></select>
+
+      <!-- Date -->
+      <label class="form-label" for="tx-date">Data</label>
+      <input type="date" id="tx-date" class="input-field" aria-label="Data da transação" />
+
+      <!-- Note -->
+      <label class="form-label" for="tx-note">Nota (opcional)</label>
+      <input type="text" id="tx-note" class="input-field" placeholder="Adicione uma nota…" maxlength="100" aria-label="Nota adicional" />
+
+      <button id="save-tx-btn" class="btn-primary" style="margin-top:1.25rem" aria-label="Salvar transação">Salvar transação</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Budget Modal -->
+<div id="modal-budget" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-budget-title">
+  <div class="modal-sheet">
+    <div class="modal-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <h2 id="modal-budget-title">Novo orçamento</h2>
+      <button class="icon-btn" id="modal-budget-close" aria-label="Fechar"><i class="ti ti-x" aria-hidden="true"></i></button>
+    </div>
+    <div class="modal-body">
+      <label class="form-label" for="budget-cat">Categoria</label>
+      <select id="budget-cat" class="input-field" aria-label="Categoria do orçamento"></select>
+      <label class="form-label" for="budget-limit">Limite mensal</label>
+      <div class="amount-input-wrap">
+        <span class="amount-currency">R$</span>
+        <input type="number" id="budget-limit" class="amount-input" placeholder="0,00" inputmode="decimal" step="0.01" min="0" aria-label="Limite do orçamento" />
+      </div>
+      <button id="save-budget-btn" class="btn-primary" style="margin-top:1.25rem" aria-label="Salvar orçamento">Salvar orçamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Goal Modal -->
+<div id="modal-goal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-goal-title">
+  <div class="modal-sheet">
+    <div class="modal-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <h2 id="modal-goal-title">Nova meta</h2>
+      <button class="icon-btn" id="modal-goal-close" aria-label="Fechar"><i class="ti ti-x" aria-hidden="true"></i></button>
+    </div>
+    <div class="modal-body">
+      <label class="form-label" for="goal-name">Nome da meta</label>
+      <input type="text" id="goal-name" class="input-field" placeholder="Ex: Viagem para Europa" maxlength="50" aria-label="Nome da meta" />
+      <label class="form-label" for="goal-target">Valor objetivo</label>
+      <div class="amount-input-wrap">
+        <span class="amount-currency">R$</span>
+        <input type="number" id="goal-target" class="amount-input" placeholder="0,00" inputmode="decimal" step="0.01" min="0" aria-label="Valor objetivo da meta" />
+      </div>
+      <label class="form-label" for="goal-current">Já economizei</label>
+      <div class="amount-input-wrap">
+        <span class="amount-currency">R$</span>
+        <input type="number" id="goal-current" class="amount-input" placeholder="0,00" inputmode="decimal" step="0.01" min="0" aria-label="Valor já economizado" />
+      </div>
+      <label class="form-label" for="goal-deadline">Prazo</label>
+      <input type="date" id="goal-deadline" class="input-field" aria-label="Prazo da meta" />
+      <label class="form-label" for="goal-icon">Ícone</label>
+      <div class="icon-picker" id="goal-icon-picker" role="radiogroup" aria-label="Ícone da meta">
+        <button class="icon-opt active" data-icon="🏖️" role="radio" aria-checked="true" aria-label="Praia">🏖️</button>
+        <button class="icon-opt" data-icon="🚗" role="radio" aria-checked="false" aria-label="Carro">🚗</button>
+        <button class="icon-opt" data-icon="🏠" role="radio" aria-checked="false" aria-label="Casa">🏠</button>
+        <button class="icon-opt" data-icon="💻" role="radio" aria-checked="false" aria-label="Computador">💻</button>
+        <button class="icon-opt" data-icon="✈️" role="radio" aria-checked="false" aria-label="Viagem">✈️</button>
+        <button class="icon-opt" data-icon="🎓" role="radio" aria-checked="false" aria-label="Educação">🎓</button>
+        <button class="icon-opt" data-icon="💍" role="radio" aria-checked="false" aria-label="Casamento">💍</button>
+        <button class="icon-opt" data-icon="📱" role="radio" aria-checked="false" aria-label="Celular">📱</button>
+      </div>
+      <button id="save-goal-btn" class="btn-primary" style="margin-top:1.25rem" aria-label="Salvar meta">Salvar meta</button>
+    </div>
+  </div>
+</div>
+
+<!-- Goal Deposit Modal -->
+<div id="modal-deposit" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-deposit-title">
+  <div class="modal-sheet">
+    <div class="modal-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <h2 id="modal-deposit-title">Depositar na meta</h2>
+      <button class="icon-btn" id="modal-deposit-close" aria-label="Fechar"><i class="ti ti-x" aria-hidden="true"></i></button>
+    </div>
+    <div class="modal-body">
+      <p id="deposit-goal-name" class="deposit-goal-name"></p>
+      <label class="form-label" for="deposit-amount">Valor a depositar</label>
+      <div class="amount-input-wrap">
+        <span class="amount-currency">R$</span>
+        <input type="number" id="deposit-amount" class="amount-input" placeholder="0,00" inputmode="decimal" step="0.01" min="0" aria-label="Valor a depositar" />
+      </div>
+      <button id="save-deposit-btn" class="btn-primary" style="margin-top:1.25rem" aria-label="Confirmar depósito">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast hidden" role="alert" aria-live="polite"></div>
+
+<!-- iOS Install Banner -->
+<div id="ios-install" class="ios-install hidden" role="alertdialog" aria-label="Instalar aplicativo">
+  <div class="ios-install-inner">
+    <div class="ios-install-icon">
+      <svg width="32" height="32" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <rect width="48" height="48" rx="12" fill="#1E40AF"/>
+        <path d="M14 26l7 7 13-16" stroke="#059669" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="ios-install-text">
+      <strong>Instale o Finlu</strong>
+      <span>Toque em <i class="ti ti-share" aria-hidden="true"></i> e depois "Adicionar à Tela de Início"</span>
+    </div>
+    <button class="ios-install-close" id="ios-install-close" aria-label="Fechar banner de instalação">
+      <i class="ti ti-x" aria-hidden="true"></i>
+    </button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
