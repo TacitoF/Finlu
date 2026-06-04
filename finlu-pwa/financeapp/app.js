@@ -32,13 +32,12 @@ const Cloud = (() => {
     return _user;
   }
 
-  async function signup(email, password) {
+  async function login(email, password) {
     const sb = client();
     if (!sb) throw new Error('Supabase não configurado');
-    const { data, error } = await sb.auth.signUp({ email, password });
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    // retorna o objeto completo para verificarmos se a sessão foi gerada
-    return data; 
+    return data.user;
   }
 
   async function signup(email, password) {
@@ -46,8 +45,8 @@ const Cloud = (() => {
     if (!sb) throw new Error('Supabase não configurado');
     const { data, error } = await sb.auth.signUp({ email, password });
     if (error) throw error;
-    // nao seta _user — so seta apos confirmacao via login explicito
-    return data.user;
+    // retorna o objeto completo para verificarmos se a sessão foi gerada
+    return data; 
   }
 
   async function logout() {
@@ -1099,7 +1098,13 @@ document.getElementById('auth-submit-btn').addEventListener('click', async () =>
       // Se não gerou sessão, o Supabase enviou o e-mail de confirmação
       if (!data.session) {
         document.getElementById('auth-confirm-email').textContent = email;
-        showAuthPanel('confirm'); updateSyncStatusUI('offline'); return;
+        showAuthPanel('confirm'); 
+        updateSyncStatusUI('offline'); 
+        
+        // Exibe o aviso profissional na tela por 5 segundos
+        toast('E-mail de confirmação enviado!', 5000); 
+        
+        return;
       }
       await finishLogin(data.user);
     }
