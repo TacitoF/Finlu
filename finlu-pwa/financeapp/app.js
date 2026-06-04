@@ -22,8 +22,11 @@ const Cloud = (() => {
     if (!sb) return;
     const { data: { session } } = await sb.auth.getSession();
     _user = session?.user ?? null;
-    sb.auth.onAuthStateChange((_event, sess) => {
-      _user = sess?.user ?? null;
+    sb.auth.onAuthStateChange((event, sess) => {
+      const u = sess?.user ?? null;
+      // ignora SIGNED_IN logo apos signup com email ainda nao confirmado
+      if (event === 'SIGNED_IN' && u && !u.confirmed_at) return;
+      _user = u;
       if (onAuthChange) onAuthChange(_user);
     });
     return _user;
@@ -43,7 +46,7 @@ const Cloud = (() => {
     if (!sb) throw new Error('Supabase não configurado');
     const { data, error } = await sb.auth.signUp({ email, password });
     if (error) throw error;
-    _user = data.user;
+    // nao seta _user — so seta apos confirmacao via login explicito
     return data.user;
   }
 

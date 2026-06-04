@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>E-mail confirmado — Finlu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      background: #0F172A;
+      color: #F1F5F9;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .card {
+      background: #1E293B;
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+    .icon-wrap {
+      width: 72px; height: 72px;
+      background: rgba(16,185,129,.12);
+      border: 1px solid rgba(16,185,129,.25);
+      border-radius: 20px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.5rem;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      margin-bottom: .75rem;
+    }
+    p {
+      font-size: 15px;
+      color: #94A3B8;
+      line-height: 1.7;
+      margin-bottom: 2rem;
+    }
+    .btn {
+      display: inline-block;
+      background: #1D4ED8;
+      color: #fff;
+      text-decoration: none;
+      padding: 14px 32px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      transition: background .15s;
+    }
+    .btn:hover { background: #1e40af; }
+    .note {
+      font-size: 12px;
+      color: #475569;
+      margin-top: 1.5rem;
+      margin-bottom: 0;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon-wrap">
+      <!-- checkmark SVG -->
+      <svg width="36" height="36" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M12 25l10 10 16-20" stroke="#10B981" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <h1>E-mail confirmado!</h1>
+
+    <p>
+      Sua conta no Finlu foi ativada com sucesso.<br>
+      Abra o aplicativo, vá em <strong style="color:#F1F5F9">Configurações&nbsp;&rarr; Sincronização</strong> e faça login com seu e-mail e senha.
+    </p>
+
+    <a href="/" class="btn" id="open-app-btn">Abrir o Finlu</a>
+
+    <p class="note">
+      Se o botão não abrir o app, feche esta página e abra<br>o Finlu normalmente pela tela inicial do seu dispositivo.
+    </p>
+  </div>
+
+  <script>
+    // tenta redirecionar para o app PWA instalado
+    // se não estiver instalado, o link "/" abre a versão web normalmente
+    document.getElementById('open-app-btn').addEventListener('click', function(e) {
+      // se estiver em standalone (PWA instalado), já está no app — apenas fecha a aba
+      if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
+        e.preventDefault();
+        window.close();
+      }
+      // caso contrário, o href="/" leva para a raiz do app normalmente
+    });
+  </script>
+</body>
+</html>
