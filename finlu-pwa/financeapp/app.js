@@ -20,19 +20,20 @@ const Cloud = (() => {
   async function init(onAuthChange) {
     const sb = client();
     if (!sb) return;
+    
     const { data: { session } } = await sb.auth.getSession();
     _user = session?.user ?? null;
+    if (onAuthChange) onAuthChange(_user);
+
     sb.auth.onAuthStateChange((event, sess) => {
       const u = sess?.user ?? null;
-      
-      // Abre o modal de nova senha caso o usuario venha do link de recuperacao
+      if (event === 'INITIAL_SESSION') return;
       if (event === 'PASSWORD_RECOVERY') {
         setTimeout(() => {
           openAuthModal();
           showAuthPanel('update-pw');
         }, 500);
       }
-      
       if (event === 'SIGNED_IN' && u && !u.confirmed_at) return;
       _user = u;
       if (onAuthChange) onAuthChange(_user);
@@ -156,8 +157,9 @@ function save() {
   DB.set(DB.keys.GOALS,        S.goals);
   DB.set(DB.keys.CATEGORIES,   S.categories);
   if (Cloud.currentUser()) {
+    updateSyncStatusUI('syncing');
     Cloud.pushAll(S)
-      .then(r => { if (r.ok) updateSyncStatusUI('online'); else updateSyncStatusUI('error'); })
+      .then(r => updateSyncStatusUI(r.ok ? 'online' : 'error'))
       .catch(() => updateSyncStatusUI('error'));
   }
 }
@@ -645,7 +647,6 @@ function renderSettings() {
     b.classList.toggle('active', b.dataset.theme === S.settings.theme);
     b.setAttribute('aria-checked', b.dataset.theme === S.settings.theme);
   });
-  updateSyncStatusUI(Cloud.currentUser() ? 'online' : 'offline');
   renderCatList();
 }
 
@@ -935,7 +936,6 @@ document.getElementById('csv-file-input').addEventListener('change', function ()
   reader.readAsText(file, 'UTF-8');
 });
 
-// UI para painel de nova senha (injetado dinamicamente para não precisar mexer no HTML)
 function injectPasswordRecoveryUI() {
   const modalBody = document.querySelector('#modal-auth .modal-body');
   if (!modalBody || document.getElementById('auth-panel-update-pw')) return;
@@ -1125,7 +1125,6 @@ document.getElementById('auth-resend-btn').addEventListener('click', async () =>
   finally { btn.disabled = false; btn.textContent = 'Reenviar e-mail de confirmação'; }
 });
 
-// Evita que o botao de submit force recarregamento caso esteja contido num contexto de formulario nativo
 document.getElementById('auth-submit-btn').setAttribute('type', 'button');
 document.getElementById('auth-submit-btn').addEventListener('click', async () => {
   const email = document.getElementById('auth-email').value.trim();
@@ -1141,20 +1140,20 @@ document.getElementById('auth-submit-btn').addEventListener('click', async () =>
   
   try {
     if (authMode === 'login') {
-      await finishLogin(await Cloud.login(email, pass));
+      const user = await Cloud.login(email, pass);
+      await finishLogin(user, 'Login efetuado');
     } else {
       const data = await Cloud.signup(email, pass);
       
-      // Checagem reforcada: se nao ha sessao criada ou se o usuario foi retornado sem confirmacao final
-      if (!data.session || (data.user && !data.user.confirmed_at)) {
+      if (!data.session) {
         document.getElementById('auth-confirm-email').textContent = email;
         showAuthPanel('confirm'); 
         updateSyncStatusUI('offline'); 
-        toast('E-mail de confirmação enviado!', 5000); 
+        toast('Verifique sua caixa de entrada', 5000); 
         return;
       }
       
-      await finishLogin(data.user);
+      await finishLogin(data.user, 'Conta criada com sucesso');
     }
   } catch (err) {
     const msgs = { 'Invalid login credentials': 'E-mail ou senha incorretos', 'Email not confirmed': 'Confirme seu e-mail antes de entrar', 'User already registered': 'E-mail já cadastrado. Use a aba Entrar.' };
@@ -1168,22 +1167,43 @@ document.getElementById('auth-submit-btn').addEventListener('click', async () =>
   function showAuthError(msg) { errEl.textContent = msg; errEl.classList.remove('hidden'); }
 });
 
-async function finishLogin(user) {
+async function finishLogin(user, successMsg = 'Login efetuado') {
   toast('Sincronizando dados...', 4000);
   const remote = await Cloud.pullAll(S);
+  let syncOk = true;
+  
   if (remote) {
     if (remote.transactions?.length) S.transactions = remote.transactions;
     if (remote.budgets?.length)      S.budgets      = remote.budgets;
     if (remote.goals?.length)        S.goals        = remote.goals;
     if (remote.settings)             Object.assign(S.settings, remote.settings);
-    save(); renderPage(S.currentPage); if (S.currentPage !== 'home') renderHome();
+    
+    DB.set(DB.keys.SETTINGS, S.settings);
+    DB.set(DB.keys.TRANSACTIONS, S.transactions);
+    DB.set(DB.keys.BUDGETS, S.budgets);
+    DB.set(DB.keys.GOALS, S.goals);
+    
+    const pushRes = await Cloud.pushAll(S);
+    syncOk = pushRes.ok;
+    
+    renderPage(S.currentPage); 
+    if (S.currentPage !== 'home') renderHome();
   } else {
-    await Cloud.pushAll(S);
+    const pushRes = await Cloud.pushAll(S);
+    syncOk = pushRes.ok;
   }
-  updateSyncStatusUI('online');
+  
   closeModal('modal-auth');
-  toast('Login efetuado · Dados sincronizados');
-  updateProfileUI(); renderSettings();
+  updateProfileUI(); 
+  renderSettings();
+  
+  if (syncOk) {
+    updateSyncStatusUI('online');
+    toast(`${successMsg} · Sincronizado`);
+  } else {
+    updateSyncStatusUI('error');
+    toast(`${successMsg} · Erro ao sincronizar`, 4000);
+  }
 }
 
 document.getElementById('auth-sync-now-btn').addEventListener('click', async () => {
@@ -1343,17 +1363,26 @@ function launchApp() {
   injectPasswordRecoveryUI();
 
   Cloud.init((user) => {
-    updateSyncStatusUI(user ? 'online' : 'offline');
-    if (user) {
-      Cloud.pullAll(S).then(remote => {
-        if (!remote) return;
+    if (!user) {
+      updateSyncStatusUI('offline');
+      return;
+    }
+    updateSyncStatusUI('syncing');
+    Cloud.pullAll(S).then(remote => {
+      if (remote) {
         let changed = false;
         if (remote.transactions?.length > S.transactions.length) { S.transactions = remote.transactions; changed = true; }
         if (remote.budgets?.length > S.budgets.length)           { S.budgets = remote.budgets; changed = true; }
         if (remote.goals?.length > S.goals.length)               { S.goals = remote.goals; changed = true; }
-        if (changed) { save(); renderPage(S.currentPage); }
-      }).catch(() => {});
-    }
+        if (changed) { 
+          DB.set(DB.keys.TRANSACTIONS, S.transactions);
+          DB.set(DB.keys.BUDGETS, S.budgets);
+          DB.set(DB.keys.GOALS, S.goals);
+          renderPage(S.currentPage); 
+        }
+      }
+      Cloud.pushAll(S).then(r => updateSyncStatusUI(r.ok ? 'online' : 'error'));
+    }).catch(() => updateSyncStatusUI('error'));
   });
 }
 
