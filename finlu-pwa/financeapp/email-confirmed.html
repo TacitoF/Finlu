@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>E-mail confirmado — Finlu</title>
+  <title>Confirmação — Finlu</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <style>
@@ -27,9 +27,15 @@
       margin: 0 auto 1.5rem;
     }
     h1 { font-size: 24px; font-weight: 800; letter-spacing: -.02em; margin-bottom: .75rem; color: #fff; }
-    p { font-size: 15px; color: #94A3B8; line-height: 1.7; margin-bottom: 0; }
+    p { font-size: 15px; color: #94A3B8; line-height: 1.7; margin-bottom: 2rem; }
+    .btn {
+      display: inline-block; background: #3B82F6; color: #fff;
+      text-decoration: none; padding: 14px 24px; border-radius: 8px;
+      font-size: 15px; font-weight: 700; transition: background .15s;
+      width: 100%; border: none; cursor: pointer;
+    }
+    .btn:hover { background: #2563EB; }
     
-    /* Animaçãozinha suave no check */
     .success-check { stroke-dasharray: 100; animation: draw 0.8s ease-out forwards; }
     @keyframes draw { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
   </style>
@@ -41,11 +47,26 @@
         <path class="success-check" d="M12 25l10 10 16-20" stroke="#10B981" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </div>
-    <h1>E-mail confirmado!</h1>
-    <p>
-      Sua conta no Finlu foi ativada com sucesso.<br><br>
-      Você já pode fechar esta página e voltar para o aplicativo no seu dispositivo para fazer o login.
+    <h1 id="page-title">E-mail confirmado!</h1>
+    <p id="page-desc">
+      A sua conta no Finlu foi ativada com sucesso.<br><br>
+      Clique no botão abaixo para abrir o aplicativo e fazer o login.
     </p>
+    
+    <button id="open-app-btn" class="btn">Abrir o Finlu</button>
   </div>
+
+  <script>
+    if (window.location.hash.includes('type=recovery')) {
+      document.getElementById('page-title').textContent = 'Link verificado!';
+      document.getElementById('page-desc').innerHTML = 'O seu link de recuperação é válido.<br><br>Clique abaixo para criar a sua nova palavra-passe no aplicativo.';
+    }
+
+    document.getElementById('open-app-btn').addEventListener('click', function() {
+      var hash = window.location.hash || "";
+      var param = hash ? "&action=login" : "?action=login";
+      window.location.href = "index.html" + hash + param;
+    });
+  </script>
 </body>
 </html>

@@ -24,7 +24,15 @@ const Cloud = (() => {
     _user = session?.user ?? null;
     sb.auth.onAuthStateChange((event, sess) => {
       const u = sess?.user ?? null;
-      // ignora SIGNED_IN logo apos signup com email ainda nao confirmado
+      
+      // Abre o modal de nova senha caso o usuario venha do link de recuperacao
+      if (event === 'PASSWORD_RECOVERY') {
+        setTimeout(() => {
+          openAuthModal();
+          showAuthPanel('update-pw');
+        }, 500);
+      }
+      
       if (event === 'SIGNED_IN' && u && !u.confirmed_at) return;
       _user = u;
       if (onAuthChange) onAuthChange(_user);
@@ -45,7 +53,6 @@ const Cloud = (() => {
     if (!sb) throw new Error('Supabase não configurado');
     const { data, error } = await sb.auth.signUp({ email, password });
     if (error) throw error;
-    // retorna o objeto completo para verificarmos se a sessão foi gerada
     return data; 
   }
 
@@ -56,7 +63,6 @@ const Cloud = (() => {
     _user = null;
   }
 
-  // upsert é idempotente — pode rodar multiplas vezes sem duplicar
   async function pushAll(state) {
     const sb = client();
     if (!sb || !_user) return { ok: false, reason: 'not_logged_in' };
@@ -72,7 +78,6 @@ const Cloud = (() => {
     return { ok: true };
   }
 
-  // cloud prevalece em conflito de ID; mescla local + remoto
   async function pullAll(localState) {
     const sb = client();
     if (!sb || !_user) return null;
@@ -141,7 +146,6 @@ let S = {
   txFilter:      'all',
   reportMonths:  3,
   editingGoalId: null,
-  // mês visualizado: offset relativo ao mês atual (0 = atual, -1 = anterior, +1 = próximo)
   monthOffset:   0,
 };
 
@@ -157,8 +161,6 @@ function save() {
       .catch(() => updateSyncStatusUI('error'));
   }
 }
-
-// --- utilitários ---
 
 function fmt(amount) {
   const sym = { BRL: 'R$', USD: '$', EUR: '€' }[S.settings.currency] || 'R$';
@@ -183,7 +185,6 @@ function getCategory(id) {
   return S.categories.find(c => c.id === id) || { name: 'Outros', icon: 'ti-box', color: '#94A3B8' };
 }
 
-// retorna { year, month } para o mês visualizado (month = 0-11)
 function viewedMonthYM() {
   const d = new Date();
   d.setDate(1);
@@ -191,7 +192,6 @@ function viewedMonthYM() {
   return { year: d.getFullYear(), month: d.getMonth() };
 }
 
-// retorna o intervalo ISO do mês visualizado
 function viewedMonthRange() {
   const { year, month } = viewedMonthYM();
   const start = new Date(year, month, 1).toISOString().slice(0, 10);
@@ -240,12 +240,9 @@ function escapeHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-// ícone de categoria: usa classe Tabler em vez de emoji
 function catIcon(cat) {
   return `<i class="ti ${cat.icon || 'ti-box'}" aria-hidden="true"></i>`;
 }
-
-// --- navegação entre meses ---
 
 function renderMonthNav(containerId) {
   const el = document.getElementById(containerId);
@@ -279,7 +276,6 @@ function renderMonthNav(containerId) {
   if (todayBtn) todayBtn.addEventListener('click', () => { S.monthOffset = 0; renderPage(S.currentPage); });
 }
 
-// swipe horizontal para trocar mês na página principal
 function setupMonthSwipe(pageEl) {
   let startX = 0;
   pageEl.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
@@ -290,8 +286,6 @@ function setupMonthSwipe(pageEl) {
     renderPage(S.currentPage);
   }, { passive: true });
 }
-
-// --- navegação de páginas ---
 
 function navigate(page) {
   S.currentPage = page;
@@ -323,8 +317,6 @@ function renderPage(page) {
   }
 }
 
-// --- sidebar ---
-
 function openSidebar() {
   document.getElementById('sidebar').classList.add('open');
   document.getElementById('sidebar').setAttribute('aria-hidden', 'false');
@@ -337,8 +329,6 @@ function closeSidebar() {
   document.getElementById('sidebar-overlay').classList.add('hidden');
   document.getElementById('menu-btn').setAttribute('aria-expanded', 'false');
 }
-
-// --- página inicial ---
 
 function renderHome() {
   renderMonthNav('home-month-nav');
@@ -427,8 +417,6 @@ function renderHomeGoals() {
   setupGoalButtons();
 }
 
-// --- transações ---
-
 function renderTransactions() {
   renderMonthNav('tx-month-nav');
   setupMonthSwipe(document.getElementById('page-transactions'));
@@ -449,10 +437,8 @@ function renderTransactions() {
 function txItemHTML(t, withDelete = false) {
   const cat   = getCategory(t.category);
   const sign  = t.type === 'income' ? '+' : '-';
-  // badge de parcela: ex "2/6"
   const installBadge = t.installment_index && t.installment_total
     ? `<span class="tx-installment-badge">${t.installment_index}/${t.installment_total}</span>` : '';
-  // badge de débito futuro
   const futureBadge  = t.debit_type === 'debit' && t.date > todayISO()
     ? `<span class="tx-future-badge">débito</span>` : '';
   return `<div class="tx-item" data-id="${t.id}" role="listitem">
@@ -475,7 +461,6 @@ function setupTxSwipe() {
     el.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
     el.addEventListener('touchend', e => {
       const dx = startX - e.changedTouches[0].clientX;
-      // swipe curto horizontal muda mês — só ativa swipe para deletar se não houver conflito
       if (Math.abs(dx) < 60) return;
       if (dx > 0) el.classList.add('swiped');
       else el.classList.remove('swiped');
@@ -486,7 +471,6 @@ function setupTxSwipe() {
 window.deleteTx = function(id) {
   if (!confirm('Excluir esta transação?')) return;
   const tx = S.transactions.find(t => t.id === id);
-  // se for parcela, pergunta se quer excluir todas do grupo
   if (tx?.installment_group) {
     const group    = S.transactions.filter(t => t.installment_group === tx.installment_group);
     const deleteAll = group.length > 1 && confirm(`Esta é uma transação parcelada (${group.length} parcelas). Excluir todas as parcelas?`);
@@ -505,8 +489,6 @@ window.deleteTx = function(id) {
   renderTransactions();
   if (S.currentPage === 'home') renderHome();
 };
-
-// --- orçamentos ---
 
 function renderBudget() {
   const list  = document.getElementById('budget-list');
@@ -532,8 +514,6 @@ window.deleteBudget = function(id) {
   S.budgets = S.budgets.filter(b => b.id !== id);
   save(); renderBudget(); toast('Orçamento excluído');
 };
-
-// --- metas ---
 
 function goalCardHTML(g) {
   const pct      = g.target > 0 ? Math.min(g.current / g.target * 100, 100) : 0;
@@ -582,8 +562,6 @@ window.deleteGoal = function(id, e) {
   S.goals = S.goals.filter(g => g.id !== id);
   save(); renderGoals(); renderHome(); toast('Meta excluída');
 };
-
-// --- relatórios ---
 
 let barChart = null, pieChart = null;
 
@@ -659,8 +637,6 @@ function renderTopExpenses(txs) {
   document.getElementById('top-expenses').innerHTML = top.length ? top.map(t => txItemHTML(t)).join('') : '<p style="color:var(--c-muted);font-size:13px">Nenhum gasto registrado.</p>';
 }
 
-// --- configurações ---
-
 function renderSettings() {
   document.getElementById('settings-name-val').textContent   = S.settings.name || '—';
   document.getElementById('settings-income-val').textContent = fmt(S.settings.income);
@@ -688,8 +664,6 @@ window.deleteCat = function(id) {
   save(); renderCatList(); toast('Categoria excluída');
 };
 
-// --- modais ---
-
 function openModal(id) {
   document.getElementById(id).classList.remove('hidden');
   document.body.style.overflow = 'hidden';
@@ -705,7 +679,6 @@ function closeModal(id) {
 
 function openTxModal(type = 'expense', prefillDate) {
   populateCatSelect('tx-cat', type);
-  // se vier de um mês futuro, pré-preenche a data com o primeiro dia do mês visualizado
   const dateVal = prefillDate || (S.monthOffset !== 0
     ? new Date(viewedMonthYM().year, viewedMonthYM().month, 1).toISOString().slice(0, 10)
     : todayISO());
@@ -733,7 +706,6 @@ document.querySelectorAll('.type-btn').forEach(btn => {
     btn.classList.add('active'); btn.setAttribute('aria-checked', 'true');
     const type = btn.dataset.type;
     populateCatSelect('tx-cat', type);
-    // parcelas e débito só fazem sentido em gastos
     document.getElementById('tx-installments-row').style.display = type === 'expense' ? '' : 'none';
     document.getElementById('tx-debit-row').style.display        = type === 'expense' ? '' : 'none';
   });
@@ -754,7 +726,6 @@ document.getElementById('save-tx-btn').addEventListener('click', () => {
   if (!date)                  { toast('Informe a data'); return; }
 
   if (type === 'expense' && installments > 1) {
-    // gera uma transação por parcela, cada uma no mês correspondente
     const groupId    = uid();
     const baseDate   = new Date(date + 'T00:00:00');
     for (let i = 0; i < installments; i++) {
@@ -851,8 +822,6 @@ document.getElementById('save-deposit-btn').addEventListener('click', () => {
   renderHome();
 });
 
-// --- selects de categoria ---
-
 function populateCatSelect(selectId, type) {
   const sel = document.getElementById(selectId);
   if (!sel) return;
@@ -864,8 +833,6 @@ function setupCatSelects() {
   populateCatSelect('tx-cat', 'expense');
   populateCatSelect('budget-cat', 'expense');
 }
-
-// --- ações de configurações ---
 
 document.getElementById('edit-name-btn').addEventListener('click', () => {
   const name = prompt('Seu nome:', S.settings.name);
@@ -900,9 +867,6 @@ document.getElementById('add-cat-btn').addEventListener('click', () => {
   S.categories.push({ id: uid(), name: name.trim(), icon: 'ti-box', color, type });
   save(); renderCatList(); toast('Categoria criada');
 });
-
-// --- importação CSV ---
-// formato: ID, Tipo, Descrição, Categoria, Valor, Data, Nota — mesmo do export
 
 function parseCSV(text) {
   const lines  = text.trim().split(/\r?\n/);
@@ -971,7 +935,71 @@ document.getElementById('csv-file-input').addEventListener('change', function ()
   reader.readAsText(file, 'UTF-8');
 });
 
-// --- sync UI ---
+// UI para painel de nova senha (injetado dinamicamente para não precisar mexer no HTML)
+function injectPasswordRecoveryUI() {
+  const modalBody = document.querySelector('#modal-auth .modal-body');
+  if (!modalBody || document.getElementById('auth-panel-update-pw')) return;
+
+  const div = document.createElement('div');
+  div.id = 'auth-panel-update-pw';
+  div.className = 'hidden';
+  div.innerHTML = `
+    <button id="auth-back-from-update-btn" style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--c-muted);margin-bottom:1rem;min-height:36px;background:none;border:none;cursor:pointer">
+      <i class="ti ti-arrow-left" aria-hidden="true"></i> Voltar
+    </button>
+    <h3 style="font-size:17px;font-weight:700;margin-bottom:.5rem">Criar nova senha</h3>
+    <p style="font-size:13px;color:var(--c-muted);line-height:1.6;margin-bottom:1rem">Digite sua nova senha abaixo.</p>
+    <label class="form-label" for="new-password">Nova senha</label>
+    <input type="password" id="new-password" class="input-field" placeholder="••••••••" style="margin-bottom:1rem" />
+    <p id="update-pw-error" class="hidden" style="font-size:13px;color:var(--c-red);margin-bottom:.75rem;padding:.625rem;background:rgba(239,68,68,.08);border-radius:var(--radius-sm)"></p>
+    <p id="update-pw-success" class="hidden" style="font-size:13px;color:var(--c-green);margin-bottom:.75rem;padding:.625rem;background:rgba(16,185,129,.08);border-radius:var(--radius-sm)"></p>
+    <button id="update-pw-submit" type="button" class="btn-primary">Atualizar senha</button>
+  `;
+  modalBody.appendChild(div);
+
+  document.getElementById('auth-back-from-update-btn').addEventListener('click', () => { 
+    showAuthPanel('login'); 
+    setAuthMode('login'); 
+  });
+
+  document.getElementById('update-pw-submit').addEventListener('click', async () => {
+    const pass = document.getElementById('new-password').value;
+    const errEl = document.getElementById('update-pw-error');
+    const okEl = document.getElementById('update-pw-success');
+    const btn = document.getElementById('update-pw-submit');
+    
+    errEl.classList.add('hidden'); 
+    okEl.classList.add('hidden');
+    
+    if (pass.length < 6) { 
+      errEl.textContent = 'A senha deve ter no mínimo 6 caracteres'; 
+      errEl.classList.remove('hidden'); 
+      return; 
+    }
+    
+    btn.disabled = true; 
+    btn.textContent = 'Atualizando...';
+    
+    try {
+      const sb = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const { error } = await sb.auth.updateUser({ password: pass });
+      if (error) throw error;
+      
+      okEl.textContent = 'Senha atualizada com sucesso!';
+      okEl.classList.remove('hidden');
+      setTimeout(() => { 
+        showAuthPanel('login'); 
+        setAuthMode('login'); 
+      }, 2000);
+    } catch (err) {
+      errEl.textContent = err.message || 'Erro ao atualizar senha';
+      errEl.classList.remove('hidden');
+    } finally {
+      btn.disabled = false; 
+      btn.textContent = 'Atualizar senha';
+    }
+  });
+}
 
 function updateSyncStatusUI(status) {
   const dot  = document.getElementById('sync-dot');
@@ -987,17 +1015,33 @@ function updateSyncStatusUI(status) {
     return;
   }
   switch (status) {
-    case 'online':  dot.classList.add('online');  text.textContent = `Sincronizado · ${user?.email || ''}`; btn.textContent = 'Conta'; break;
-    case 'syncing': dot.classList.add('syncing'); text.textContent = 'Sincronizando…'; btn.textContent = 'Conta'; break;
-    case 'error':   dot.classList.add('error');   text.textContent = 'Erro de sincronização'; btn.textContent = 'Tentar novamente'; btn.onclick = () => save(); return;
-    default: text.textContent = user ? `Offline · ${user.email}` : 'Não conectado — dados locais'; btn.textContent = user ? 'Conta' : 'Entrar';
+    case 'online':  
+      dot.classList.add('online');  
+      text.textContent = `Sincronizado · ${user?.email || ''}`; 
+      btn.textContent = 'Minha Conta'; 
+      break;
+    case 'syncing': 
+      dot.classList.add('syncing'); 
+      text.textContent = 'Sincronizando...'; 
+      btn.textContent = 'Minha Conta'; 
+      break;
+    case 'error':   
+      dot.classList.add('error');   
+      text.textContent = 'Erro de sincronização'; 
+      btn.textContent = 'Tentar novamente'; 
+      btn.onclick = () => save(); 
+      return;
+    default: 
+      text.textContent = user ? `Offline · ${user.email}` : 'Não conectado — dados locais'; 
+      btn.textContent = user ? 'Minha Conta' : 'Entrar';
   }
   btn.onclick = () => openAuthModal();
 }
 
 function showAuthPanel(name) {
-  ['logged','confirm','reset','login'].forEach(p => {
-    document.getElementById(`auth-panel-${p}`).classList.toggle('hidden', p !== name);
+  ['logged','confirm','reset','login','update-pw'].forEach(p => {
+    const el = document.getElementById(`auth-panel-${p}`);
+    if (el) el.classList.toggle('hidden', p !== name);
   });
 }
 
@@ -1052,7 +1096,7 @@ document.getElementById('reset-submit-btn').addEventListener('click', async () =
   const btn   = document.getElementById('reset-submit-btn');
   errEl.classList.add('hidden'); okEl.classList.add('hidden');
   if (!email) { errEl.textContent = 'Informe seu e-mail'; errEl.classList.remove('hidden'); return; }
-  btn.disabled = true; btn.textContent = 'Enviando…';
+  btn.disabled = true; btn.textContent = 'Enviando...';
   try {
     const sb = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     if (!sb) throw new Error('Supabase não configurado');
@@ -1072,7 +1116,7 @@ document.getElementById('auth-resend-btn').addEventListener('click', async () =>
   const email = document.getElementById('auth-confirm-email').textContent;
   if (!email) return;
   const btn = document.getElementById('auth-resend-btn');
-  btn.disabled = true; btn.textContent = 'Enviando…';
+  btn.disabled = true; btn.textContent = 'Enviando...';
   try {
     const sb = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     await sb.auth.resend({ type: 'signup', email });
@@ -1081,43 +1125,51 @@ document.getElementById('auth-resend-btn').addEventListener('click', async () =>
   finally { btn.disabled = false; btn.textContent = 'Reenviar e-mail de confirmação'; }
 });
 
+// Evita que o botao de submit force recarregamento caso esteja contido num contexto de formulario nativo
+document.getElementById('auth-submit-btn').setAttribute('type', 'button');
 document.getElementById('auth-submit-btn').addEventListener('click', async () => {
   const email = document.getElementById('auth-email').value.trim();
   const pass  = document.getElementById('auth-password').value;
   const errEl = document.getElementById('auth-error');
   const btn   = document.getElementById('auth-submit-btn');
+  
   if (!email || !pass) { showAuthError('Preencha e-mail e senha'); return; }
-  if (pass.length < 6) { showAuthError('Senha deve ter mínimo 6 caracteres'); return; }
-  btn.disabled = true; btn.textContent = 'Aguarde…';
+  if (pass.length < 6) { showAuthError('A senha deve ter no mínimo 6 caracteres'); return; }
+  
+  btn.disabled = true; btn.textContent = 'Aguarde...';
   errEl.classList.add('hidden'); updateSyncStatusUI('syncing');
+  
   try {
     if (authMode === 'login') {
       await finishLogin(await Cloud.login(email, pass));
     } else {
       const data = await Cloud.signup(email, pass);
-      // Se não gerou sessão, o Supabase enviou o e-mail de confirmação
-      if (!data.session) {
+      
+      // Checagem reforcada: se nao ha sessao criada ou se o usuario foi retornado sem confirmacao final
+      if (!data.session || (data.user && !data.user.confirmed_at)) {
         document.getElementById('auth-confirm-email').textContent = email;
         showAuthPanel('confirm'); 
         updateSyncStatusUI('offline'); 
-        
-        // Exibe o aviso profissional na tela por 5 segundos
         toast('E-mail de confirmação enviado!', 5000); 
-        
         return;
       }
+      
       await finishLogin(data.user);
     }
   } catch (err) {
     const msgs = { 'Invalid login credentials': 'E-mail ou senha incorretos', 'Email not confirmed': 'Confirme seu e-mail antes de entrar', 'User already registered': 'E-mail já cadastrado. Use a aba Entrar.' };
     showAuthError(msgs[err.message] || err.message || 'Erro desconhecido');
     updateSyncStatusUI('offline');
-  } finally { btn.disabled = false; btn.textContent = authMode === 'login' ? 'Entrar' : 'Criar conta'; }
+  } finally { 
+    btn.disabled = false; 
+    btn.textContent = authMode === 'login' ? 'Entrar' : 'Criar conta'; 
+  }
+  
   function showAuthError(msg) { errEl.textContent = msg; errEl.classList.remove('hidden'); }
 });
 
 async function finishLogin(user) {
-  toast('Sincronizando dados…', 4000);
+  toast('Sincronizando dados...', 4000);
   const remote = await Cloud.pullAll(S);
   if (remote) {
     if (remote.transactions?.length) S.transactions = remote.transactions;
@@ -1136,11 +1188,11 @@ async function finishLogin(user) {
 
 document.getElementById('auth-sync-now-btn').addEventListener('click', async () => {
   const btn = document.getElementById('auth-sync-now-btn');
-  btn.disabled = true; btn.textContent = 'Sincronizando…'; updateSyncStatusUI('syncing');
+  btn.disabled = true; btn.textContent = 'Sincronizando...'; updateSyncStatusUI('syncing');
   try {
     const r = await Cloud.pushAll(S);
     if (r.ok) { toast('Sincronizado com sucesso'); updateSyncStatusUI('online'); }
-    else      { toast('Erro: ' + r.reason, 4000); updateSyncStatusUI('error'); }
+    else      { toast('Erro ao sincronizar', 4000); updateSyncStatusUI('error'); }
   } catch { toast('Falha na sincronização'); updateSyncStatusUI('error'); }
   finally  { btn.disabled = false; btn.textContent = 'Sincronizar agora'; }
 });
@@ -1172,8 +1224,6 @@ document.getElementById('reset-btn').addEventListener('click', () => {
   location.reload();
 });
 
-// --- perfil ---
-
 function updateProfileUI() {
   const ini = initials(S.settings.name);
   document.getElementById('avatar-initials').textContent = ini;
@@ -1181,8 +1231,6 @@ function updateProfileUI() {
   document.getElementById('sidebar-name').textContent    = S.settings.name || 'Usuário';
   document.getElementById('sidebar-income').textContent  = `${fmt(S.settings.income)} / mês`;
 }
-
-// --- wiring ---
 
 document.querySelectorAll('[data-page]').forEach(el => { el.addEventListener('click', () => navigate(el.dataset.page)); });
 document.getElementById('menu-btn').addEventListener('click', openSidebar);
@@ -1214,8 +1262,6 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 document.getElementById('tx-search').addEventListener('input', () => renderTransactions());
 document.querySelectorAll('.section-link').forEach(btn => { btn.addEventListener('click', () => navigate(btn.dataset.page)); });
 
-// --- banner de instalação iOS ---
-
 function checkInstallBanner() {
   const isIOS        = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isStandalone = window.navigator.standalone === true;
@@ -1227,8 +1273,6 @@ document.getElementById('ios-install-close').addEventListener('click', () => {
   document.getElementById('ios-install').classList.add('hidden');
   S.settings.installDismissed = true; save();
 });
-
-// --- onboarding ---
 
 function startOnboarding() {
   document.getElementById('onboarding').classList.remove('hidden');
@@ -1268,39 +1312,36 @@ function finishOnboarding() {
   launchApp();
 }
 
-// --- inicialização ---
-
 function launchApp() {
   document.getElementById('main-app').classList.remove('hidden');
   document.documentElement.setAttribute('data-theme', S.settings.theme);
   updateProfileUI();
   
-  // --- LÓGICA DE ROTAS POR URL ---
   const urlParams = new URLSearchParams(window.location.search);
   const action = urlParams.get('action');
 
   if (action === 'login') {
-    navigate('settings'); // Vai para a aba configurações
+    navigate('settings');
     setTimeout(() => {
-      openAuthModal('login'); // Abre o modal de login
-      // Limpa a URL para o modal não reabrir se o usuário atualizar a página
+      openAuthModal('login');
       window.history.replaceState({}, document.title, window.location.pathname);
     }, 300);
   } 
-  else if (action === 'add-expense') { // Aproveita para fazer o atalho do manifest.json funcionar
+  else if (action === 'add-expense') {
     navigate('home');
     setTimeout(() => openTxModal('expense'), 300);
   }
-  else if (action === 'add-income') { // Aproveita para fazer o atalho do manifest.json funcionar
+  else if (action === 'add-income') {
     navigate('home');
     setTimeout(() => openTxModal('income'), 300);
   }
   else {
-    navigate('home'); // Comportamento padrão se não tiver parâmetro
+    navigate('home');
   }
-  // -------------------------------
 
   checkInstallBanner();
+  injectPasswordRecoveryUI();
+
   Cloud.init((user) => {
     updateSyncStatusUI(user ? 'online' : 'offline');
     if (user) {
@@ -1317,7 +1358,6 @@ function launchApp() {
 }
 
 function init() {
-  // aplica o tema antes de renderizar para evitar flash
   document.documentElement.setAttribute('data-theme', S.settings.theme || 'dark');
   setTimeout(() => {
     document.getElementById('splash').style.opacity    = '0';
@@ -1331,9 +1371,7 @@ function init() {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .then(() => console.log('[Finlu] SW registrado'))
-      .catch(err => console.warn('[Finlu] SW falhou:', err));
+    navigator.serviceWorker.register('sw.js').catch(() => {});
   });
 }
 
