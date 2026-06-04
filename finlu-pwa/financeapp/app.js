@@ -32,13 +32,13 @@ const Cloud = (() => {
     return _user;
   }
 
-  async function login(email, password) {
+  async function signup(email, password) {
     const sb = client();
     if (!sb) throw new Error('Supabase não configurado');
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    const { data, error } = await sb.auth.signUp({ email, password });
     if (error) throw error;
-    _user = data.user;
-    return data.user;
+    // retorna o objeto completo para verificarmos se a sessão foi gerada
+    return data; 
   }
 
   async function signup(email, password) {
@@ -990,7 +990,7 @@ function updateSyncStatusUI(status) {
   switch (status) {
     case 'online':  dot.classList.add('online');  text.textContent = `Sincronizado · ${user?.email || ''}`; btn.textContent = 'Conta'; break;
     case 'syncing': dot.classList.add('syncing'); text.textContent = 'Sincronizando…'; btn.textContent = 'Conta'; break;
-    case 'error':   dot.classList.add('error');   text.textContent = 'Erro de sincronização'; btn.textContent = 'Retry'; btn.onclick = () => save(); return;
+    case 'error':   dot.classList.add('error');   text.textContent = 'Erro de sincronização'; btn.textContent = 'Tentar novamente'; btn.onclick = () => save(); return;
     default: text.textContent = user ? `Offline · ${user.email}` : 'Não conectado — dados locais'; btn.textContent = user ? 'Conta' : 'Entrar';
   }
   btn.onclick = () => openAuthModal();
@@ -1095,12 +1095,13 @@ document.getElementById('auth-submit-btn').addEventListener('click', async () =>
     if (authMode === 'login') {
       await finishLogin(await Cloud.login(email, pass));
     } else {
-      const user = await Cloud.signup(email, pass);
-      if (!user?.confirmed_at) {
+      const data = await Cloud.signup(email, pass);
+      // Se não gerou sessão, o Supabase enviou o e-mail de confirmação
+      if (!data.session) {
         document.getElementById('auth-confirm-email').textContent = email;
         showAuthPanel('confirm'); updateSyncStatusUI('offline'); return;
       }
-      await finishLogin(user);
+      await finishLogin(data.user);
     }
   } catch (err) {
     const msgs = { 'Invalid login credentials': 'E-mail ou senha incorretos', 'Email not confirmed': 'Confirme seu e-mail antes de entrar', 'User already registered': 'E-mail já cadastrado. Use a aba Entrar.' };
