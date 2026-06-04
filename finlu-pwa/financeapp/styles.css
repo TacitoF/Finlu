@@ -802,3 +802,72 @@ input[type="date"].input-field { color-scheme: dark; }
 [data-theme="light"] .sidebar       { background: #f8fafc; }
 [data-theme="light"] .modal-sheet   { background: #fff; }
 [data-theme="light"] .toast         { background: #1e293b; }
+
+/* --- navegação de mês --- */
+.month-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .625rem 0 .875rem; gap: 8px;
+}
+.month-nav-btn {
+  width: 44px; height: 44px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--c-text); font-size: 20px;
+  background: var(--c-surface); border: 1px solid var(--c-border);
+  transition: var(--transition); flex-shrink: 0;
+}
+.month-nav-btn:active { background: var(--c-surface2); }
+.month-nav-label {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  gap: 8px; flex-wrap: wrap;
+}
+.month-nav-title {
+  font-size: 15px; font-weight: 700; letter-spacing: -.01em;
+  color: var(--c-text);
+}
+.month-nav-today {
+  font-size: 11px; font-weight: 600; color: var(--c-blue);
+  padding: 3px 10px; border-radius: 20px;
+  background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.2);
+  min-height: 28px; transition: var(--transition);
+}
+.month-nav-today:active { background: rgba(59,130,246,.2); }
+.month-nav-badge {
+  font-size: 10px; font-weight: 700; color: var(--c-amber);
+  padding: 2px 8px; border-radius: 20px;
+  background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.2);
+  text-transform: uppercase; letter-spacing: .06em;
+}
+
+/* --- badges de parcela e débito futuro --- */
+.tx-installment-badge,
+.tx-future-badge {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 700;
+  padding: 1px 6px; border-radius: 4px;
+  margin-left: 6px; vertical-align: middle;
+}
+.tx-installment-badge {
+  background: rgba(99,102,241,.15); color: #818cf8;
+  border: 1px solid rgba(99,102,241,.25);
+}
+.tx-future-badge {
+  background: rgba(245,158,11,.12); color: var(--c-amber);
+  border: 1px solid rgba(245,158,11,.2);
+}
+
+/* hint abaixo do select de parcelas */
+.tx-installment-hint {
+  font-size: 11px; color: var(--c-muted); margin-top: .375rem;
+  line-height: 1.5;
+}
+
+/* ícone de meta — substituiu o emoji */
+.goal-icon-wrap {
+  width: 42px; height: 42px;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-sm);
+  background: rgba(59,130,246,.1);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.goal-icon-wrap i { font-size: 22px; color: var(--c-blue); }

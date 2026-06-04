@@ -149,6 +149,9 @@
       <!-- ── HOME ── -->
       <section id="page-home" class="page active" aria-label="Página inicial">
         <div class="page-scroll">
+          <!-- navegação de mês — preenchida via JS -->
+          <div id="home-month-nav"></div>
+
           <!-- Balance Card -->
           <div class="balance-card" role="region" aria-label="Saldo do mês">
             <div class="balance-label">Saldo disponível</div>
@@ -172,7 +175,6 @@
             </div>
           </div>
 
-          <!-- Quick Actions -->
           <div class="section-header">
             <span class="section-title">Ações rápidas</span>
           </div>
@@ -195,7 +197,6 @@
             </button>
           </div>
 
-          <!-- Spending by category (mini donut) -->
           <div class="section-header">
             <span class="section-title">Gastos do mês</span>
             <button class="section-link" data-page="reports">Ver mais</button>
@@ -205,21 +206,18 @@
             <div class="donut-legend" id="donut-legend"></div>
           </div>
 
-          <!-- Budget progress -->
           <div class="section-header">
             <span class="section-title">Orçamentos</span>
             <button class="section-link" data-page="budget">Ver todos</button>
           </div>
           <div id="home-budgets"></div>
 
-          <!-- Recent transactions -->
           <div class="section-header">
             <span class="section-title">Últimas transações</span>
             <button class="section-link" data-page="transactions">Ver todas</button>
           </div>
           <div id="home-transactions" class="tx-list"></div>
 
-          <!-- Goals preview -->
           <div class="section-header">
             <span class="section-title">Suas metas</span>
             <button class="section-link" data-page="goals">Ver todas</button>
@@ -233,6 +231,9 @@
       <!-- ── TRANSACTIONS ── -->
       <section id="page-transactions" class="page" aria-label="Transações">
         <div class="page-scroll">
+          <!-- navegação de mês -->
+          <div id="tx-month-nav"></div>
+
           <div class="filter-bar" role="toolbar" aria-label="Filtros">
             <button class="filter-btn active" data-filter="all">Tudo</button>
             <button class="filter-btn" data-filter="income">Receitas</button>
@@ -247,7 +248,7 @@
           <div id="tx-page-list" class="tx-list" role="list" aria-label="Lista de transações"></div>
           <div id="tx-empty" class="empty-state hidden">
             <i class="ti ti-receipt-off" aria-hidden="true"></i>
-            <p>Nenhuma transação encontrada</p>
+            <p>Nenhuma transação neste mês</p>
           </div>
           <div style="height:100px"></div>
         </div>
@@ -468,32 +469,60 @@
       <button class="icon-btn" id="modal-tx-close" aria-label="Fechar"><i class="ti ti-x" aria-hidden="true"></i></button>
     </div>
     <div class="modal-body">
-      <!-- Type Toggle -->
       <div class="type-toggle" role="radiogroup" aria-label="Tipo de transação">
         <button class="type-btn active" data-type="expense" role="radio" aria-checked="true">Gasto</button>
         <button class="type-btn" data-type="income" role="radio" aria-checked="false">Receita</button>
       </div>
 
-      <!-- Amount -->
       <label class="form-label" for="tx-amount">Valor</label>
       <div class="amount-input-wrap">
         <span class="amount-currency" id="tx-currency-sym">R$</span>
         <input type="number" id="tx-amount" class="amount-input" placeholder="0,00" inputmode="decimal" step="0.01" min="0" aria-label="Valor da transação" />
       </div>
 
-      <!-- Description -->
       <label class="form-label" for="tx-desc">Descrição</label>
       <input type="text" id="tx-desc" class="input-field" placeholder="Ex: Supermercado" maxlength="60" aria-label="Descrição da transação" />
 
-      <!-- Category -->
       <label class="form-label" for="tx-cat">Categoria</label>
       <select id="tx-cat" class="input-field" aria-label="Categoria da transação"></select>
 
-      <!-- Date -->
       <label class="form-label" for="tx-date">Data</label>
       <input type="date" id="tx-date" class="input-field" aria-label="Data da transação" />
 
-      <!-- Note -->
+      <!-- parcelas — só visível em gastos -->
+      <div id="tx-installments-row">
+        <label class="form-label" for="tx-installments">Parcelas</label>
+        <select id="tx-installments" class="input-field" aria-label="Número de parcelas">
+          <option value="1">À vista</option>
+          <option value="2">2x</option>
+          <option value="3">3x</option>
+          <option value="4">4x</option>
+          <option value="5">5x</option>
+          <option value="6">6x</option>
+          <option value="7">7x</option>
+          <option value="8">8x</option>
+          <option value="9">9x</option>
+          <option value="10">10x</option>
+          <option value="11">11x</option>
+          <option value="12">12x</option>
+          <option value="18">18x</option>
+          <option value="24">24x</option>
+        </select>
+        <p class="tx-installment-hint">Parcelas a partir da data selecionada, uma por mês.</p>
+      </div>
+
+      <!-- tipo de débito — só visível em gastos -->
+      <div id="tx-debit-row">
+        <label class="form-label" for="tx-debit-type">Tipo de débito</label>
+        <select id="tx-debit-type" class="input-field" aria-label="Tipo de débito">
+          <option value="none">Não especificado</option>
+          <option value="debit">Débito (à vista)</option>
+          <option value="credit">Crédito</option>
+          <option value="pix">Pix</option>
+          <option value="boleto">Boleto</option>
+        </select>
+      </div>
+
       <label class="form-label" for="tx-note">Nota (opcional)</label>
       <input type="text" id="tx-note" class="input-field" placeholder="Adicione uma nota…" maxlength="100" aria-label="Nota adicional" />
 
@@ -546,17 +575,6 @@
       </div>
       <label class="form-label" for="goal-deadline">Prazo</label>
       <input type="date" id="goal-deadline" class="input-field" aria-label="Prazo da meta" />
-      <label class="form-label" for="goal-icon">Ícone</label>
-      <div class="icon-picker" id="goal-icon-picker" role="radiogroup" aria-label="Ícone da meta">
-        <button class="icon-opt active" data-icon="🏖️" role="radio" aria-checked="true" aria-label="Praia">🏖️</button>
-        <button class="icon-opt" data-icon="🚗" role="radio" aria-checked="false" aria-label="Carro">🚗</button>
-        <button class="icon-opt" data-icon="🏠" role="radio" aria-checked="false" aria-label="Casa">🏠</button>
-        <button class="icon-opt" data-icon="💻" role="radio" aria-checked="false" aria-label="Computador">💻</button>
-        <button class="icon-opt" data-icon="✈️" role="radio" aria-checked="false" aria-label="Viagem">✈️</button>
-        <button class="icon-opt" data-icon="🎓" role="radio" aria-checked="false" aria-label="Educação">🎓</button>
-        <button class="icon-opt" data-icon="💍" role="radio" aria-checked="false" aria-label="Casamento">💍</button>
-        <button class="icon-opt" data-icon="📱" role="radio" aria-checked="false" aria-label="Celular">📱</button>
-      </div>
       <button id="save-goal-btn" class="btn-primary" style="margin-top:1.25rem" aria-label="Salvar meta">Salvar meta</button>
     </div>
   </div>
@@ -604,7 +622,7 @@
   </div>
 </div>
 
-<!-- ═══ MODAL AUTH (Melhoria 2) ═══ -->
+<!-- MODAL AUTH -->
 <div id="modal-auth" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-auth-title">
   <div class="modal-sheet">
     <div class="modal-handle" aria-hidden="true"></div>
@@ -614,9 +632,9 @@
     </div>
     <div class="modal-body">
 
-      <!-- Painel logado -->
+      <!-- Painel: usuário logado -->
       <div id="auth-panel-logged" class="hidden">
-        <p style="font-size:14px;color:var(--c-muted);margin-bottom:1rem">Conectado como:</p>
+        <p style="font-size:14px;color:var(--c-muted);margin-bottom:.5rem">Conectado como:</p>
         <p id="auth-user-email" style="font-size:15px;font-weight:700;margin-bottom:1.5rem;color:var(--c-blue)"></p>
         <button id="auth-sync-now-btn" class="btn-primary" style="margin-bottom:.75rem" aria-label="Sincronizar agora">
           <i class="ti ti-refresh" style="vertical-align:-2px"></i> Sincronizar agora
@@ -625,16 +643,58 @@
           <i class="ti ti-logout"></i> Sair da conta
         </button>
         <p style="font-size:12px;color:var(--c-muted);margin-top:1rem;line-height:1.6">
-          Seus dados são sincronizados automaticamente ao salvar. Os dados locais são mantidos como fallback offline.
+          Os dados são sincronizados automaticamente ao salvar. O localStorage funciona como fallback offline.
         </p>
       </div>
 
-      <!-- Painel login/cadastro -->
+      <!-- Painel: aguardando confirmação de e-mail -->
+      <div id="auth-panel-confirm" class="hidden">
+        <div style="text-align:center;padding:1rem 0 1.5rem">
+          <div style="width:56px;height:56px;background:rgba(59,130,246,.12);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem">
+            <i class="ti ti-mail" style="font-size:28px;color:var(--c-blue)" aria-hidden="true"></i>
+          </div>
+          <h3 style="font-size:17px;font-weight:700;margin-bottom:.625rem">Confirme seu e-mail</h3>
+          <p style="font-size:14px;color:var(--c-muted);line-height:1.6;margin-bottom:1.5rem">
+            Enviamos um link de confirmação para<br>
+            <strong id="auth-confirm-email" style="color:var(--c-text)"></strong>
+          </p>
+          <p style="font-size:13px;color:var(--c-muted);line-height:1.6">
+            Clique no link do e-mail para ativar sua conta.<br>Depois volte aqui e faça login.
+          </p>
+        </div>
+        <button id="auth-back-to-login-btn" class="btn-primary" style="margin-bottom:.75rem">
+          Ir para Login
+        </button>
+        <button id="auth-resend-btn" class="btn-ghost" style="font-size:13px">
+          Reenviar e-mail de confirmação
+        </button>
+      </div>
+
+      <!-- Painel: redefinir senha -->
+      <div id="auth-panel-reset" class="hidden">
+        <button id="auth-back-from-reset-btn" style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--c-muted);margin-bottom:1rem;min-height:36px">
+          <i class="ti ti-arrow-left" aria-hidden="true"></i> Voltar
+        </button>
+        <h3 style="font-size:17px;font-weight:700;margin-bottom:.5rem">Redefinir senha</h3>
+        <p style="font-size:13px;color:var(--c-muted);line-height:1.6;margin-bottom:1rem">
+          Informe seu e-mail e enviaremos um link para criar uma nova senha.
+        </p>
+        <label class="form-label" for="reset-email">E-mail</label>
+        <input type="email" id="reset-email" class="input-field"
+               placeholder="seu@email.com" autocomplete="email"
+               inputmode="email" aria-label="E-mail para redefinição" style="margin-bottom:1rem" />
+        <p id="reset-error" class="hidden"
+           style="font-size:13px;color:var(--c-red);margin-bottom:.75rem;padding:.625rem;background:rgba(239,68,68,.08);border-radius:var(--radius-sm)"></p>
+        <p id="reset-success" class="hidden"
+           style="font-size:13px;color:var(--c-green);margin-bottom:.75rem;padding:.625rem;background:rgba(16,185,129,.08);border-radius:var(--radius-sm)"></p>
+        <button id="reset-submit-btn" class="btn-primary">Enviar link</button>
+      </div>
+
+      <!-- Painel: login / cadastro -->
       <div id="auth-panel-login">
-        <!-- Aviso de configuração -->
         <div id="auth-config-warning" class="hidden" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:var(--radius-md);padding:.875rem;margin-bottom:1rem;font-size:13px;color:var(--c-amber);line-height:1.6">
           <strong>Configure o Supabase</strong> para ativar a sincronização.<br>
-          Edite as constantes <code>SUPABASE_URL</code> e <code>SUPABASE_ANON_KEY</code> no início do <code>app.js</code> com as credenciais do seu projeto em <a href="https://supabase.com" target="_blank" rel="noopener" style="color:var(--c-blue)">supabase.com</a>.
+          Edite <code>SUPABASE_URL</code> e <code>SUPABASE_ANON_KEY</code> no topo do <code>app.js</code>.
         </div>
 
         <div class="auth-tabs">
@@ -650,18 +710,22 @@
         <label class="form-label" for="auth-password">Senha</label>
         <input type="password" id="auth-password" class="input-field"
                placeholder="••••••••" autocomplete="current-password"
-               aria-label="Senha" style="margin-bottom:1.25rem" />
+               aria-label="Senha" />
+
+        <!-- link esqueci senha — só visível no modo login -->
+        <div id="forgot-password-wrap" style="text-align:right;margin-top:.5rem;margin-bottom:.75rem">
+          <button id="forgot-password-btn" style="font-size:12px;color:var(--c-blue);min-height:36px;padding:0 2px">
+            Esqueci minha senha
+          </button>
+        </div>
 
         <p id="auth-error" class="hidden"
            style="font-size:13px;color:var(--c-red);margin-bottom:.75rem;padding:.625rem;background:rgba(239,68,68,.08);border-radius:var(--radius-sm)"></p>
 
         <button id="auth-submit-btn" class="btn-primary" aria-label="Entrar com e-mail e senha">Entrar</button>
 
-        <div class="auth-divider">ou</div>
-
-        <p style="font-size:12px;color:var(--c-muted);text-align:center;line-height:1.6">
-          Seus dados locais são mesclados com a nuvem ao fazer login.<br>
-          Nenhum dado é perdido.
+        <p style="font-size:12px;color:var(--c-muted);text-align:center;margin-top:1rem;line-height:1.6">
+          Seus dados locais são mesclados com a nuvem ao fazer login.
         </p>
       </div>
 
