@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finlu-v1.3';
+const CACHE_NAME = 'finlu-v1.4';
 
 // assets que entram no cache na instalação do SW
 const STATIC_ASSETS = [
