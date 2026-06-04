@@ -390,9 +390,23 @@
             </button>
           </div>
 
+          <!-- ── SINCRONIZAÇÃO (Melhoria 2) ── -->
+          <div class="settings-group">
+            <div class="settings-label">Sincronização em nuvem</div>
+            <div id="sync-status-bar" class="sync-status-bar">
+              <span class="sync-dot" id="sync-dot"></span>
+              <span id="sync-status-text">Não conectado — dados locais</span>
+              <button class="sync-btn" id="sync-action-btn" aria-label="Gerenciar conta de sincronização">Entrar</button>
+            </div>
+          </div>
+
           <div class="settings-group">
             <div class="settings-label">Dados</div>
-            <button class="settings-danger" id="export-btn" aria-label="Exportar dados em CSV">
+            <!-- Melhoria 1: botão Importar CSV -->
+            <button class="settings-action" id="import-btn" aria-label="Importar transações de arquivo CSV">
+              <i class="ti ti-upload" aria-hidden="true"></i> Importar CSV
+            </button>
+            <button class="settings-danger" id="export-btn" aria-label="Exportar dados em CSV" style="margin-top:.5rem">
               <i class="ti ti-download" aria-hidden="true"></i> Exportar CSV
             </button>
             <button class="settings-danger" id="reset-btn" aria-label="Apagar todos os dados" style="margin-top:.5rem">
@@ -404,9 +418,9 @@
             <div class="settings-label">Sobre</div>
             <div class="settings-about">
               <strong>Finlu</strong> — Assistente financeiro pessoal<br>
-              Versão 1.0 · PWA otimizado para iPhone<br>
-              Todos os dados ficam no seu dispositivo.<br>
-              <span style="color:var(--c-green)">100% privado e offline</span>
+              Versão 2.0 · PWA otimizado para iPhone<br>
+              Dados locais + sincronização opcional via Supabase.<br>
+              <span style="color:var(--c-green)">Privado e offline-first</span>
             </div>
           </div>
 
@@ -590,6 +604,76 @@
   </div>
 </div>
 
+<!-- ═══ MODAL AUTH (Melhoria 2) ═══ -->
+<div id="modal-auth" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-auth-title">
+  <div class="modal-sheet">
+    <div class="modal-handle" aria-hidden="true"></div>
+    <div class="modal-header">
+      <h2 id="modal-auth-title">Sincronização</h2>
+      <button class="icon-btn" id="modal-auth-close" aria-label="Fechar"><i class="ti ti-x" aria-hidden="true"></i></button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Painel logado -->
+      <div id="auth-panel-logged" class="hidden">
+        <p style="font-size:14px;color:var(--c-muted);margin-bottom:1rem">Conectado como:</p>
+        <p id="auth-user-email" style="font-size:15px;font-weight:700;margin-bottom:1.5rem;color:var(--c-blue)"></p>
+        <button id="auth-sync-now-btn" class="btn-primary" style="margin-bottom:.75rem" aria-label="Sincronizar agora">
+          <i class="ti ti-refresh" style="vertical-align:-2px"></i> Sincronizar agora
+        </button>
+        <button id="auth-logout-btn" class="settings-danger" style="border-radius:var(--radius-md)" aria-label="Sair da conta">
+          <i class="ti ti-logout"></i> Sair da conta
+        </button>
+        <p style="font-size:12px;color:var(--c-muted);margin-top:1rem;line-height:1.6">
+          Seus dados são sincronizados automaticamente ao salvar. Os dados locais são mantidos como fallback offline.
+        </p>
+      </div>
+
+      <!-- Painel login/cadastro -->
+      <div id="auth-panel-login">
+        <!-- Aviso de configuração -->
+        <div id="auth-config-warning" class="hidden" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:var(--radius-md);padding:.875rem;margin-bottom:1rem;font-size:13px;color:var(--c-amber);line-height:1.6">
+          <strong>Configure o Supabase</strong> para ativar a sincronização.<br>
+          Edite as constantes <code>SUPABASE_URL</code> e <code>SUPABASE_ANON_KEY</code> no início do <code>app.js</code> com as credenciais do seu projeto em <a href="https://supabase.com" target="_blank" rel="noopener" style="color:var(--c-blue)">supabase.com</a>.
+        </div>
+
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-auth-tab="login" role="tab" aria-selected="true">Entrar</button>
+          <button class="auth-tab" data-auth-tab="signup" role="tab" aria-selected="false">Cadastrar</button>
+        </div>
+
+        <label class="form-label" for="auth-email">E-mail</label>
+        <input type="email" id="auth-email" class="input-field"
+               placeholder="seu@email.com" autocomplete="email"
+               inputmode="email" aria-label="E-mail" />
+
+        <label class="form-label" for="auth-password">Senha</label>
+        <input type="password" id="auth-password" class="input-field"
+               placeholder="••••••••" autocomplete="current-password"
+               aria-label="Senha" style="margin-bottom:1.25rem" />
+
+        <p id="auth-error" class="hidden"
+           style="font-size:13px;color:var(--c-red);margin-bottom:.75rem;padding:.625rem;background:rgba(239,68,68,.08);border-radius:var(--radius-sm)"></p>
+
+        <button id="auth-submit-btn" class="btn-primary" aria-label="Entrar com e-mail e senha">Entrar</button>
+
+        <div class="auth-divider">ou</div>
+
+        <p style="font-size:12px;color:var(--c-muted);text-align:center;line-height:1.6">
+          Seus dados locais são mesclados com a nuvem ao fazer login.<br>
+          Nenhum dado é perdido.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Input oculto para importação CSV (Melhoria 1) -->
+<input type="file" id="csv-file-input" accept=".csv,text/csv" class="hidden" aria-hidden="true" tabindex="-1" />
+
+<!-- Supabase JS (Melhoria 2) — carregado via CDN, sem build step -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="app.js"></script>
 </body>
