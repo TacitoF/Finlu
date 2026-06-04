@@ -99,7 +99,9 @@ const Cloud = (() => {
     };
   }
 
-  return { isConfigured, currentUser, init, login, signup, logout, pushAll, pullAll };
+  function setUser(u) { _user = u; }
+
+  return { isConfigured, currentUser, setUser, init, login, signup, logout, pushAll, pullAll };
 })();
 
 const DB = {
@@ -493,6 +495,8 @@ window.deleteTx = function(id) {
 };
 
 function renderBudget() {
+  renderMonthNav('budget-month-nav');
+  setupMonthSwipe(document.getElementById('page-budget'));
   const list  = document.getElementById('budget-list');
   const empty = document.getElementById('budget-empty');
   if (!S.budgets.length) { list.innerHTML = ''; empty.classList.remove('hidden'); return; }
@@ -701,6 +705,22 @@ function openTxModal(type = 'expense', prefillDate) {
 document.getElementById('modal-tx-close').addEventListener('click', () => closeModal('modal-tx'));
 document.getElementById('modal-tx').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal('modal-tx'); });
 
+function updateInstallmentHint() {
+  const hint       = document.getElementById('tx-installment-hint');
+  const amount     = parseFloat(document.getElementById('tx-amount').value);
+  const installments = parseInt(document.getElementById('tx-installments').value) || 1;
+  if (!hint) return;
+  if (installments > 1 && amount > 0) {
+    const perInstall = Math.round((amount / installments) * 100) / 100;
+    hint.textContent = `${installments}x de ${fmt(perInstall)} — total ${fmt(amount)}`;
+  } else {
+    hint.textContent = 'Parcelas a partir da data selecionada, uma por mês.';
+  }
+}
+
+document.getElementById('tx-amount').addEventListener('input', updateInstallmentHint);
+document.getElementById('tx-installments').addEventListener('change', updateInstallmentHint);
+
 document.querySelectorAll('.type-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.type-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-checked', 'false'); });
@@ -727,13 +747,14 @@ document.getElementById('save-tx-btn').addEventListener('click', () => {
   if (!date)                  { toast('Informe a data'); return; }
 
   if (type === 'expense' && installments > 1) {
-    const groupId    = uid();
-    const baseDate   = new Date(date + 'T00:00:00');
+    const groupId      = uid();
+    const baseDate     = new Date(date + 'T00:00:00');
+    const installAmt   = Math.round((amount / installments) * 100) / 100;
     for (let i = 0; i < installments; i++) {
       const d = new Date(baseDate);
       d.setMonth(d.getMonth() + i);
       S.transactions.push({
-        id: uid(), type, amount, description: desc, category: cat,
+        id: uid(), type, amount: installAmt, description: desc, category: cat,
         date:               d.toISOString().slice(0, 10),
         note,
         installment_group:  groupId,
@@ -742,7 +763,7 @@ document.getElementById('save-tx-btn').addEventListener('click', () => {
         debit_type:         'installment',
       });
     }
-    toast(`${installments} parcelas adicionadas`);
+    toast(`${installments}x de ${fmt(installAmt)} adicionadas`);
   } else {
     S.transactions.push({
       id: uid(), type, amount, description: desc, category: cat, date, note,
@@ -1144,15 +1165,14 @@ document.getElementById('auth-submit-btn').addEventListener('click', async () =>
       await finishLogin(user, 'Login efetuado');
     } else {
       const data = await Cloud.signup(email, pass);
-      
+
       if (!data.session) {
+        updateSyncStatusUI('offline');
         document.getElementById('auth-confirm-email').textContent = email;
-        showAuthPanel('confirm'); 
-        updateSyncStatusUI('offline'); 
-        toast('Verifique sua caixa de entrada', 5000); 
+        showAuthPanel('confirm');
         return;
       }
-      
+
       await finishLogin(data.user, 'Conta criada com sucesso');
     }
   } catch (err) {
@@ -1168,35 +1188,36 @@ document.getElementById('auth-submit-btn').addEventListener('click', async () =>
 });
 
 async function finishLogin(user, successMsg = 'Login efetuado') {
+  Cloud.setUser(user);
   toast('Sincronizando dados...', 4000);
   const remote = await Cloud.pullAll(S);
   let syncOk = true;
-  
+
   if (remote) {
     if (remote.transactions?.length) S.transactions = remote.transactions;
     if (remote.budgets?.length)      S.budgets      = remote.budgets;
     if (remote.goals?.length)        S.goals        = remote.goals;
     if (remote.settings)             Object.assign(S.settings, remote.settings);
-    
+
     DB.set(DB.keys.SETTINGS, S.settings);
     DB.set(DB.keys.TRANSACTIONS, S.transactions);
     DB.set(DB.keys.BUDGETS, S.budgets);
     DB.set(DB.keys.GOALS, S.goals);
-    
+
     const pushRes = await Cloud.pushAll(S);
     syncOk = pushRes.ok;
-    
-    renderPage(S.currentPage); 
+
+    renderPage(S.currentPage);
     if (S.currentPage !== 'home') renderHome();
   } else {
     const pushRes = await Cloud.pushAll(S);
     syncOk = pushRes.ok;
   }
-  
+
   closeModal('modal-auth');
-  updateProfileUI(); 
+  updateProfileUI();
   renderSettings();
-  
+
   if (syncOk) {
     updateSyncStatusUI('online');
     toast(`${successMsg} · Sincronizado`);

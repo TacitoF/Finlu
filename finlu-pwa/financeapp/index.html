@@ -257,6 +257,7 @@
       <!-- ── BUDGET ── -->
       <section id="page-budget" class="page" aria-label="Orçamentos">
         <div class="page-scroll">
+          <div id="budget-month-nav"></div>
           <div class="section-header" style="margin-top:.5rem">
             <span class="section-title">Seus orçamentos</span>
             <button class="btn-sm" id="add-budget-btn" aria-label="Adicionar orçamento">
@@ -508,7 +509,7 @@
           <option value="18">18x</option>
           <option value="24">24x</option>
         </select>
-        <p class="tx-installment-hint">Parcelas a partir da data selecionada, uma por mês.</p>
+        <p class="tx-installment-hint" id="tx-installment-hint">Parcelas a partir da data selecionada, uma por mês.</p>
       </div>
 
       <!-- tipo de débito — só visível em gastos -->
