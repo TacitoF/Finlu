@@ -1081,7 +1081,13 @@ document.getElementById('auth-submit-btn').addEventListener('click', async () =>
       user = await Cloud.login(email, pass);
     } else {
       user = await Cloud.signup(email, pass);
-      if (!user) { showAuthError('Verifique seu e-mail para confirmar o cadastro'); return; }
+      if (!user || !user.confirmed_at) {
+        closeModal('modal-auth');
+        toast('📧 Confirme seu e-mail para ativar a conta — verifique sua caixa de entrada', 6000);
+        btn.disabled    = false;
+        btn.textContent = 'Criar conta';
+        return;
+       }
     }
 
     toast('Sincronizando dados…', 4000);
