@@ -1268,7 +1268,32 @@ function launchApp() {
   document.getElementById('main-app').classList.remove('hidden');
   document.documentElement.setAttribute('data-theme', S.settings.theme);
   updateProfileUI();
-  navigate('home');
+  
+  // --- LÓGICA DE ROTAS POR URL ---
+  const urlParams = new URLSearchParams(window.location.search);
+  const action = urlParams.get('action');
+
+  if (action === 'login') {
+    navigate('settings'); // Vai para a aba configurações
+    setTimeout(() => {
+      openAuthModal('login'); // Abre o modal de login
+      // Limpa a URL para o modal não reabrir se o usuário atualizar a página
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }, 300);
+  } 
+  else if (action === 'add-expense') { // Aproveita para fazer o atalho do manifest.json funcionar
+    navigate('home');
+    setTimeout(() => openTxModal('expense'), 300);
+  }
+  else if (action === 'add-income') { // Aproveita para fazer o atalho do manifest.json funcionar
+    navigate('home');
+    setTimeout(() => openTxModal('income'), 300);
+  }
+  else {
+    navigate('home'); // Comportamento padrão se não tiver parâmetro
+  }
+  // -------------------------------
+
   checkInstallBanner();
   Cloud.init((user) => {
     updateSyncStatusUI(user ? 'online' : 'offline');
