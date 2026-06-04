@@ -84,7 +84,7 @@
       Abra o aplicativo, vá em <strong style="color:#F1F5F9">Configurações&nbsp;&rarr; Sincronização</strong> e faça login com seu e-mail e senha.
     </p>
 
-    <a href="/?action=login" class="btn" id="open-app-btn">Abrir o Finlu</a>
+    <a href="index.html?action=login" class="btn" id="open-app-btn">Abrir o Finlu</a>
 
     <p class="note">
       Se o botão não abrir o app, feche esta página e abra<br>o Finlu normalmente pela tela inicial do seu dispositivo.
@@ -92,11 +92,9 @@
   </div>
 
   <script>
-    // Atualizado para forçar o redirecionamento passando o parâmetro
     document.getElementById('open-app-btn').addEventListener('click', function(e) {
       if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
-        // Se estiver no iOS/PWA, ele muda a URL atual para carregar o app com o parâmetro
-        window.location.href = "/?action=login";
+        window.location.href = "index.html?action=login";
       }
     });
   </script>
